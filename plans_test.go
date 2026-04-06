@@ -100,10 +100,8 @@ func TestListPricingNoAuth(t *testing.T) {
 
 func TestPathEscaping(t *testing.T) {
 	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.RawPath, "plan%2Fslash") {
-			// path.Join + url.PathEscape encodes the slash
-		} else if strings.Contains(r.URL.Path, "plan/slash") {
-			t.Error("expected slash in slug to be escaped")
+		if !strings.Contains(r.URL.RawPath, "plan%2Fslash") {
+			t.Errorf("expected escaped slash in path, got %s", r.URL.RawPath)
 		}
 		w.Write([]byte(`{"id":"1","slug":"plan","name":"Plan","price_usdc":"0","billing_period":"monthly"}`))
 	}))

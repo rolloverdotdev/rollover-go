@@ -3,21 +3,16 @@ package rollover
 import (
 	"context"
 	"net/http"
-	"strings"
 	"testing"
 )
 
 func TestListInvoices(t *testing.T) {
-	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/v1/organization") {
-			w.Write([]byte(`{"slug":"acme"}`))
-			return
-		}
+	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("wallet") != "0xabc" {
 			t.Errorf("expected wallet filter")
 		}
 		w.Write([]byte(`{"data":[{"id":"inv-1","wallet_address":"0xabc","status":"paid","total_amount":"9.99"}],"total":1,"limit":20,"offset":0}`))
-	})
+	}))
 
 	result, err := c.ListInvoices(context.Background(), &ListOptions{Wallet: "0xabc"})
 	if err != nil {
