@@ -58,6 +58,9 @@ func TestGetPlan(t *testing.T) {
 
 func TestUpdatePlanPointerFields(t *testing.T) {
 	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
 		body, _ := io.ReadAll(r.Body)
 		var req map[string]any
 		json.Unmarshal(body, &req)
@@ -78,6 +81,28 @@ func TestUpdatePlanPointerFields(t *testing.T) {
 	}
 	if result.Name != "Updated" {
 		t.Errorf("expected Updated, got %s", result.Name)
+	}
+}
+
+func TestUpdateFeatureUsesPatch(t *testing.T) {
+	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("expected PATCH, got %s", r.Method)
+		}
+		if !strings.HasSuffix(r.URL.Path, "/starter/features/api-calls") {
+			t.Errorf("expected feature path, got %s", r.URL.Path)
+		}
+		w.Write([]byte(`{"id":"f-1","feature_slug":"api-calls","name":"API Calls","limit_amount":20000,"reset_period":"monthly"}`))
+	}))
+
+	result, err := c.UpdateFeature(context.Background(), "starter", "api-calls", UpdateFeatureParams{
+		LimitAmount: Ptr(20000),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.LimitAmount != 20000 {
+		t.Errorf("expected limit_amount 20000, got %d", result.LimitAmount)
 	}
 }
 

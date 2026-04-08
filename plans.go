@@ -64,7 +64,7 @@ func (c *Client) UpdatePlan(ctx context.Context, planSlug string, params UpdateP
 	}
 
 	var result Plan
-	if err := c.doRequest(ctx, http.MethodPut, path.Join("/v1/plans", url.PathEscape(planSlug)), q, params, nil, &result); err != nil {
+	if err := c.doRequest(ctx, http.MethodPatch, path.Join("/v1/plans", url.PathEscape(planSlug)), q, params, nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -101,7 +101,7 @@ func (c *Client) UpdateFeature(ctx context.Context, planSlug, featureSlug string
 	}
 
 	var result Feature
-	if err := c.doRequest(ctx, http.MethodPut, path.Join("/v1/plans", url.PathEscape(planSlug), "features", url.PathEscape(featureSlug)), q, params, nil, &result); err != nil {
+	if err := c.doRequest(ctx, http.MethodPatch, path.Join("/v1/plans", url.PathEscape(planSlug), "features", url.PathEscape(featureSlug)), q, params, nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

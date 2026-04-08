@@ -7,12 +7,18 @@ import (
 )
 
 func TestGetAnalytics(t *testing.T) {
-	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("expected GET, got %s", r.Method)
 		}
+		if r.URL.Query().Get("slug") != "acme" {
+			t.Errorf("expected slug acme")
+		}
+		if r.URL.Query().Get("mode") != "test" {
+			t.Errorf("expected mode test")
+		}
 		w.Write([]byte(`{"mrr":"99.99","active_subs":10,"total_revenue":"500.00","top_features":[{"feature_slug":"api-calls","total_used":1000}]}`))
-	})
+	}))
 
 	result, err := c.GetAnalytics(context.Background())
 	if err != nil {
