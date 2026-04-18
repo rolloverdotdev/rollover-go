@@ -64,18 +64,31 @@ func (c *Client) UpdatePlan(ctx context.Context, planSlug string, params UpdateP
 	}
 
 	var result Plan
-	if err := c.doRequest(ctx, http.MethodPatch, path.Join("/v1/plans", url.PathEscape(planSlug)), q, params, nil, &result); err != nil {
+	if err := c.doRequest(ctx, http.MethodPut, path.Join("/v1/plans", url.PathEscape(planSlug)), q, params, nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-// ArchivePlan archives a plan by slug.
+// ArchivePlan archives a plan by slug, hiding it from new subscribers while existing
+// subscribers keep their current subscription on the revision they signed up on.
 func (c *Client) ArchivePlan(ctx context.Context, planSlug string) error {
 	q, err := c.adminQuery(ctx, nil)
 	if err != nil {
 		return err
 	}
+	return c.doRequest(ctx, http.MethodDelete, path.Join("/v1/plans", url.PathEscape(planSlug)), q, nil, nil, nil)
+}
+
+// DeletePlan hard removes a plan and all of its revisions from the org. The server returns
+// 409 plan_has_subscriptions if any subscription past or present references the plan, so
+// reach for ArchivePlan when the plan has ever had a subscriber.
+func (c *Client) DeletePlan(ctx context.Context, planSlug string) error {
+	q, err := c.adminQuery(ctx, nil)
+	if err != nil {
+		return err
+	}
+	q.Set("hard", "true")
 	return c.doRequest(ctx, http.MethodDelete, path.Join("/v1/plans", url.PathEscape(planSlug)), q, nil, nil, nil)
 }
 
@@ -101,7 +114,7 @@ func (c *Client) UpdateFeature(ctx context.Context, planSlug, featureSlug string
 	}
 
 	var result Feature
-	if err := c.doRequest(ctx, http.MethodPatch, path.Join("/v1/plans", url.PathEscape(planSlug), "features", url.PathEscape(featureSlug)), q, params, nil, &result); err != nil {
+	if err := c.doRequest(ctx, http.MethodPut, path.Join("/v1/plans", url.PathEscape(planSlug), "features", url.PathEscape(featureSlug)), q, params, nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

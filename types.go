@@ -33,7 +33,10 @@ type GrantResult struct {
 	Granted int `json:"granted"`
 }
 
-// Plan represents a billing plan.
+// Plan represents a billing plan. Pricing fields are hydrated from the latest revision on the
+// server side, so PriceUSDC and friends still read directly off the struct even though the
+// canonical pricing now lives in plan_revisions. LatestRevisionID identifies which revision
+// new subscribers will be pinned to.
 type Plan struct {
 	ID               string    `json:"id"`
 	Slug             string    `json:"slug"`
@@ -44,7 +47,8 @@ type Plan struct {
 	BillingPeriod    string    `json:"billing_period"`
 	TrialDays        int       `json:"trial_days"`
 	AutoAssign       bool      `json:"auto_assign"`
-	IsActive         bool      `json:"is_active"`
+	IsArchived       bool      `json:"is_archived"`
+	LatestRevisionID string    `json:"latest_revision_id"`
 	SortOrder        int       `json:"sort_order"`
 	Subscribers      int       `json:"subscribers"`
 	Features         []Feature `json:"features"`
@@ -66,21 +70,25 @@ type Feature struct {
 	Weight       string `json:"weight"`
 }
 
-// Subscription represents a wallet's subscription to a plan.
+// Subscription represents a wallet's subscription to a plan. PlanRevisionID pins the
+// subscription to the pricing revision it signed up on, so renewals charge the same price
+// even after the plan's price is edited.
 type Subscription struct {
-	ID            string    `json:"id"`
-	WalletAddress string    `json:"wallet_address"`
-	PlanID        string    `json:"plan_id"`
-	PlanName      string    `json:"plan_name"`
-	Status        string    `json:"status"`
-	Mode          string    `json:"mode"`
-	PeriodStart   time.Time `json:"period_start"`
-	PeriodEnd     time.Time `json:"period_end"`
-	TrialEnd      time.Time `json:"trial_end"`
-	CancelAtEnd   bool      `json:"cancel_at_end"`
-	Metadata      any       `json:"metadata"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	WalletAddress  string    `json:"wallet_address"`
+	PlanID         string    `json:"plan_id"`
+	PlanRevisionID string    `json:"plan_revision_id,omitempty"`
+	PlanName       string    `json:"plan_name"`
+	Status         string    `json:"status"`
+	BillingPeriod  string    `json:"billing_period"`
+	Mode           string    `json:"mode"`
+	PeriodStart    time.Time `json:"period_start"`
+	PeriodEnd      time.Time `json:"period_end"`
+	TrialEnd       time.Time `json:"trial_end"`
+	CancelAtEnd    bool      `json:"cancel_at_end"`
+	Metadata       any       `json:"metadata"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // UsageEvent represents a single usage tracking event.
@@ -138,6 +146,9 @@ type CreateFeatureParams struct {
 
 // UpdatePlanParams are the parameters for UpdatePlan. Only non-nil fields are
 // sent to the server, allowing explicit zero values like false or 0.
+// Setting any pricing field (PriceUSDC, BillingPeriod, TrialDays, SetupFeeUSDC) on the
+// server creates a new plan revision instead of mutating the existing one, so existing
+// subscribers stay pinned to the price they signed up on.
 type UpdatePlanParams struct {
 	Name          *string `json:"name,omitempty"`
 	Description   *string `json:"description,omitempty"`
@@ -200,11 +211,14 @@ type CreditTransaction struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// Invoice represents a billing invoice.
+// Invoice represents a billing invoice. ChainID and Mode identify which chain the invoice
+// settled on and which environment it belongs to.
 type Invoice struct {
 	ID             string    `json:"id"`
 	WalletAddress  string    `json:"wallet_address"`
 	SubscriptionID string    `json:"subscription_id"`
+	Mode           string    `json:"mode"`
+	ChainID        string    `json:"chain_id"`
 	Status         string    `json:"status"`
 	BaseAmount     string    `json:"base_amount"`
 	OverageAmount  string    `json:"overage_amount"`
@@ -214,4 +228,35 @@ type Invoice struct {
 	PeriodEnd      time.Time `json:"period_end"`
 	SettledAt      time.Time `json:"settled_at"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+// Chain represents a payment destination chain configured on an organization for a given mode.
+type Chain struct {
+	ID               string    `json:"id"`
+	OrgID            string    `json:"org_id"`
+	Mode             string    `json:"mode"`
+	ChainID          string    `json:"chain_id"`
+	PayToAddress     string    `json:"pay_to_address"`
+	StablecoinSymbol string    `json:"stablecoin_symbol"`
+	Enabled          bool      `json:"enabled"`
+	Priority         int       `json:"priority"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// CreateChainParams are the parameters for CreateChain.
+type CreateChainParams struct {
+	ChainID          string `json:"chain_id"`
+	PayToAddress     string `json:"pay_to_address"`
+	StablecoinSymbol string `json:"stablecoin_symbol,omitempty"`
+	Priority         int    `json:"priority,omitempty"`
+}
+
+// UpdateChainParams are the parameters for UpdateChain; only non-nil fields are sent so
+// you can leave any field out to keep its current value.
+type UpdateChainParams struct {
+	PayToAddress     *string `json:"pay_to_address,omitempty"`
+	StablecoinSymbol *string `json:"stablecoin_symbol,omitempty"`
+	Enabled          *bool   `json:"enabled,omitempty"`
+	Priority         *int    `json:"priority,omitempty"`
 }

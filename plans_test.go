@@ -58,8 +58,8 @@ func TestGetPlan(t *testing.T) {
 
 func TestUpdatePlanPointerFields(t *testing.T) {
 	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("expected PATCH, got %s", r.Method)
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
 		}
 		body, _ := io.ReadAll(r.Body)
 		var req map[string]any
@@ -84,10 +84,10 @@ func TestUpdatePlanPointerFields(t *testing.T) {
 	}
 }
 
-func TestUpdateFeatureUsesPatch(t *testing.T) {
+func TestUpdateFeatureUsesPut(t *testing.T) {
 	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPatch {
-			t.Errorf("expected PATCH, got %s", r.Method)
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
 		}
 		if !strings.HasSuffix(r.URL.Path, "/starter/features/api-calls") {
 			t.Errorf("expected feature path, got %s", r.URL.Path)
