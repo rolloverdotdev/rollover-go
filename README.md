@@ -122,18 +122,16 @@ plan, err := ro.UpdatePlan(ctx, "starter", rollover.UpdatePlanParams{
 // Archive a plan.
 err := ro.ArchivePlan(ctx, "starter")
 
-// Add a feature to a plan.
-feature, err := ro.CreateFeature(ctx, "starter", rollover.CreateFeatureParams{
-    FeatureSlug: "api-calls", Name: "API Calls", LimitAmount: 10000, ResetPeriod: "monthly",
+// Link a catalog feature to a plan.
+link, err := ro.LinkFeature(ctx, "starter", rollover.LinkFeatureParams{
+    FeatureSlug: "api-calls", LimitAmount: 10000, ResetPeriod: "monthly", Policy: rollover.PolicyHardBlock,
 })
 
-// Update a feature.
-feature, err := ro.UpdateFeature(ctx, "starter", "api-calls", rollover.UpdateFeatureParams{
-    LimitAmount: rollover.Ptr(20000),
-})
+// Edit an existing plan-feature link.
+link, err := ro.UpdatePlanFeature(ctx, "starter", "api-calls", rollover.UpdatePlanFeatureParams{LimitAmount: rollover.Ptr(20000)})
 
-// Delete a feature.
-err := ro.DeleteFeature(ctx, "starter", "api-calls")
+// Detach a feature from a plan.
+err := ro.UnlinkFeature(ctx, "starter", "api-calls")
 
 // List public pricing for a pricing page.
 plans, err := ro.ListPricing(ctx, "your-org-slug")

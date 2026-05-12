@@ -121,7 +121,7 @@ func (c *Client) UpdatePlanFeature(ctx context.Context, planSlug, featureSlug st
 	return &result, nil
 }
 
-// UnlinkFeature detaches a feature from a plan. The catalog feature itself is unaffected.
+// UnlinkFeature detaches a feature from a plan.
 func (c *Client) UnlinkFeature(ctx context.Context, planSlug, featureSlug string) error {
 	q, err := c.adminQuery(ctx, nil)
 	if err != nil {

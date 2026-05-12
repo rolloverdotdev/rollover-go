@@ -33,8 +33,7 @@ func main() {
 	}
 	fmt.Printf("Created plan: %s (%s)\n", plan.Name, plan.Slug)
 
-	// 2. Link features to the plan. New feature slugs are auto-created in the catalog
-	// as metered features.
+	// 2. Link a feature to the plan.
 	link, err := ro.LinkFeature(ctx, slug, rollover.LinkFeatureParams{
 		FeatureSlug: "api-calls",
 		LimitAmount: 10000,
