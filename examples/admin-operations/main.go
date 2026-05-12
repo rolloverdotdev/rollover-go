@@ -44,26 +44,25 @@ func main() {
 	}
 	fmt.Printf("Updated plan: %s\n", updated.Name)
 
-	// Add a feature.
-	feature, err := ro.CreateFeature(ctx, slug, rollover.CreateFeatureParams{
+	// Link a feature to the plan.
+	link, err := ro.LinkFeature(ctx, slug, rollover.LinkFeatureParams{
 		FeatureSlug: "requests",
-		Name:        "API Requests",
 		LimitAmount: 5000,
 		ResetPeriod: "monthly",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Added feature: %s (limit: %d)\n", feature.FeatureSlug, feature.LimitAmount)
+	fmt.Printf("Linked feature: %s (limit: %d, policy: %s)\n", link.Feature.Slug, link.LimitAmount, link.Policy)
 
-	// Update the feature.
-	updatedFeature, err := ro.UpdateFeature(ctx, slug, "requests", rollover.UpdateFeatureParams{
+	// Update the plan-feature link.
+	updatedLink, err := ro.UpdatePlanFeature(ctx, slug, "requests", rollover.UpdatePlanFeatureParams{
 		LimitAmount: rollover.Ptr(10000),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Updated feature limit: %d\n", updatedFeature.LimitAmount)
+	fmt.Printf("Updated link limit: %d\n", updatedLink.LimitAmount)
 
 
 	// Subscribe a wallet and inspect the subscription.
@@ -100,7 +99,7 @@ func main() {
 	fmt.Printf("Invoices: %d\n", invoices.Total)
 
 	// Cleanup.
-	ro.DeleteFeature(ctx, slug, "requests")
+	ro.UnlinkFeature(ctx, slug, "requests")
 	ro.ArchivePlan(ctx, slug)
 	fmt.Println("Cleaned up.")
 }

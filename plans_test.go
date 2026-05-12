@@ -84,7 +84,7 @@ func TestUpdatePlanPointerFields(t *testing.T) {
 	}
 }
 
-func TestUpdateFeatureUsesPut(t *testing.T) {
+func TestUpdatePlanFeatureUsesPut(t *testing.T) {
 	c := testClient(t, orgHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
 			t.Errorf("expected PUT, got %s", r.Method)
@@ -92,10 +92,10 @@ func TestUpdateFeatureUsesPut(t *testing.T) {
 		if !strings.HasSuffix(r.URL.Path, "/starter/features/api-calls") {
 			t.Errorf("expected feature path, got %s", r.URL.Path)
 		}
-		w.Write([]byte(`{"id":"f-1","feature_slug":"api-calls","name":"API Calls","limit_amount":20000,"reset_period":"monthly"}`))
+		w.Write([]byte(`{"id":"pf-1","limit_amount":20000,"reset_period":"monthly","policy":"hard_block","feature":{"id":"f-1","slug":"api-calls","name":"API Calls","type":"metered"}}`))
 	}))
 
-	result, err := c.UpdateFeature(context.Background(), "starter", "api-calls", UpdateFeatureParams{
+	result, err := c.UpdatePlanFeature(context.Background(), "starter", "api-calls", UpdatePlanFeatureParams{
 		LimitAmount: Ptr(20000),
 	})
 	if err != nil {
@@ -103,6 +103,9 @@ func TestUpdateFeatureUsesPut(t *testing.T) {
 	}
 	if result.LimitAmount != 20000 {
 		t.Errorf("expected limit_amount 20000, got %d", result.LimitAmount)
+	}
+	if result.Feature == nil || result.Feature.Slug != "api-calls" {
+		t.Errorf("expected nested feature with slug api-calls, got %+v", result.Feature)
 	}
 }
 

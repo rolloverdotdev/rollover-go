@@ -2,9 +2,20 @@ package rollover
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 )
+
+// newIdempotencyKey returns a 128-bit random hex string for use as an Idempotency-Key
+// header value. The server only requires that the key be opaque and stable across retries,
+// so we avoid pulling in a UUID dependency.
+func newIdempotencyKey() string {
+	var b [16]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
+}
 
 // Check returns whether a wallet is allowed to use a feature.
 func (c *Client) Check(ctx context.Context, wallet, feature string) (*CheckResult, error) {
@@ -33,11 +44,12 @@ func (c *Client) Track(ctx context.Context, wallet, feature string, amount int, 
 		Amount  int    `json:"amount"`
 	}{wallet, feature, amount}
 
-	var headers http.Header
-	if cfg.idempotencyKey != "" {
-		headers = http.Header{}
-		headers.Set("Idempotency-Key", cfg.idempotencyKey)
+	key := cfg.idempotencyKey
+	if key == "" {
+		key = newIdempotencyKey()
 	}
+	headers := http.Header{}
+	headers.Set("Idempotency-Key", key)
 
 	var result TrackResult
 	if err := c.doRequest(ctx, http.MethodPost, "/v1/track", nil, body, headers, &result); err != nil {

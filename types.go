@@ -50,24 +50,58 @@ type Plan struct {
 	IsArchived       bool      `json:"is_archived"`
 	LatestRevisionID string    `json:"latest_revision_id"`
 	SortOrder        int       `json:"sort_order"`
-	Subscribers      int       `json:"subscribers"`
-	Features         []Feature `json:"features"`
+	Subscribers      int           `json:"subscribers"`
+	Features         []PlanFeature `json:"features"`
 	Metadata         any       `json:"metadata"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 	LastSubscribedAt time.Time `json:"last_subscribed_at"`
 }
 
-// Feature represents a metered feature on a plan.
+// FeatureType is the canonical kind of feature in the org catalog. Boolean is an access
+// flag, metered is a usage counter, credit is a pooled balance fed by metered features,
+// and static is a non-consumptive numeric cap the consumer app enforces itself.
+type FeatureType string
+
+const (
+	FeatureTypeBoolean FeatureType = "boolean"
+	FeatureTypeMetered FeatureType = "metered"
+	FeatureTypeCredit  FeatureType = "credit"
+	FeatureTypeStatic  FeatureType = "static"
+)
+
+// Policy controls what happens when a subscriber hits the plan-feature limit. HardBlock
+// rejects the request, SoftWarn lets it through (metered/credit only) for cycle-end
+// reconciliation, and Hide treats the feature as not present at all.
+type Policy string
+
+const (
+	PolicyHardBlock Policy = "hard_block"
+	PolicySoftWarn  Policy = "soft_warn"
+	PolicyHide      Policy = "hide"
+)
+
+// Feature is an org-scoped catalog feature. Plans reference features through PlanFeature
+// link rows; the catalog row owns the canonical slug, display name, and type.
 type Feature struct {
-	ID           string `json:"id"`
-	FeatureSlug  string `json:"feature_slug"`
-	Name         string `json:"name"`
-	LimitAmount  int    `json:"limit_amount"`
-	ResetPeriod  string `json:"reset_period"`
-	CreditCost   int    `json:"credit_cost"`
-	OveragePrice string `json:"overage_price"`
-	Weight       string `json:"weight"`
+	ID   string      `json:"id"`
+	Slug string      `json:"slug"`
+	Name string      `json:"name"`
+	Type FeatureType `json:"type"`
+}
+
+// PlanFeature is one feature linked to one plan, carrying the plan-specific limits and
+// the policy that controls what happens when a subscriber hits them. The nested Feature
+// pointer is populated on responses with the catalog row this link points to.
+type PlanFeature struct {
+	ID           string   `json:"id"`
+	LimitAmount  int      `json:"limit_amount"`
+	ResetPeriod  string   `json:"reset_period"`
+	OveragePrice string   `json:"overage_price"`
+	Weight       string   `json:"weight"`
+	CreditCost   int      `json:"credit_cost"`
+	Policy       Policy   `json:"policy"`
+	Feature      *Feature `json:"feature,omitempty"`
 }
 
 // Subscription represents a wallet's subscription to a plan. PlanRevisionID pins the
@@ -133,15 +167,20 @@ type CreatePlanParams struct {
 	SortOrder     int    `json:"sort_order,omitempty"`
 }
 
-// CreateFeatureParams are the parameters for CreateFeature.
-type CreateFeatureParams struct {
-	FeatureSlug  string `json:"feature_slug"`
-	Name         string `json:"name"`
+// LinkFeatureParams are the parameters for LinkFeature, which attaches a catalog feature
+// to a plan. Supply either FeatureID or FeatureSlug; if FeatureSlug names a feature that
+// does not yet exist in the org catalog, the server creates one as a metered feature.
+// Policy defaults to hard_block on the server when omitted; soft_warn requires a metered
+// or credit feature.
+type LinkFeatureParams struct {
+	FeatureID    string `json:"feature_id,omitempty"`
+	FeatureSlug  string `json:"feature_slug,omitempty"`
 	LimitAmount  int    `json:"limit_amount,omitempty"`
 	ResetPeriod  string `json:"reset_period,omitempty"`
 	CreditCost   int    `json:"credit_cost,omitempty"`
 	OveragePrice string `json:"overage_price,omitempty"`
 	Weight       string `json:"weight,omitempty"`
+	Policy       Policy `json:"policy,omitempty"`
 }
 
 // UpdatePlanParams are the parameters for UpdatePlan. Only non-nil fields are
@@ -161,15 +200,15 @@ type UpdatePlanParams struct {
 	SortOrder     *int    `json:"sort_order,omitempty"`
 }
 
-// UpdateFeatureParams are the parameters for UpdateFeature. Only non-nil fields
-// are sent to the server, allowing explicit zero values.
-type UpdateFeatureParams struct {
-	Name         *string `json:"name,omitempty"`
+// UpdatePlanFeatureParams are the parameters for UpdatePlanFeature, which edits one
+// plan-feature link. Only non-nil fields are sent to the server.
+type UpdatePlanFeatureParams struct {
 	LimitAmount  *int    `json:"limit_amount,omitempty"`
 	ResetPeriod  *string `json:"reset_period,omitempty"`
 	CreditCost   *int    `json:"credit_cost,omitempty"`
 	OveragePrice *string `json:"overage_price,omitempty"`
 	Weight       *string `json:"weight,omitempty"`
+	Policy       *Policy `json:"policy,omitempty"`
 }
 
 // Ptr returns a pointer to the given value, useful for setting fields on

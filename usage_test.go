@@ -106,10 +106,14 @@ func TestTrackWithIdempotencyKey(t *testing.T) {
 	}
 }
 
-func TestTrackWithoutIdempotencyKey(t *testing.T) {
+func TestTrackAutoIdempotencyKey(t *testing.T) {
 	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("Idempotency-Key"); got != "" {
-			t.Errorf("expected no idempotency key, got %s", got)
+		got := r.Header.Get("Idempotency-Key")
+		if got == "" {
+			t.Errorf("expected auto-generated idempotency key, got empty header")
+		}
+		if len(got) != 32 {
+			t.Errorf("expected 32-char hex key, got %q (len %d)", got, len(got))
 		}
 		w.Write([]byte(`{"allowed":true,"used":1,"remaining":99}`))
 	})

@@ -92,36 +92,37 @@ func (c *Client) DeletePlan(ctx context.Context, planSlug string) error {
 	return c.doRequest(ctx, http.MethodDelete, path.Join("/v1/plans", url.PathEscape(planSlug)), q, nil, nil, nil)
 }
 
-// CreateFeature adds a feature to a plan.
-func (c *Client) CreateFeature(ctx context.Context, planSlug string, params CreateFeatureParams) (*Feature, error) {
+// LinkFeature attaches a catalog feature to a plan. If params.FeatureSlug names a feature
+// that does not yet exist in the org catalog, the server creates one as a metered feature.
+func (c *Client) LinkFeature(ctx context.Context, planSlug string, params LinkFeatureParams) (*PlanFeature, error) {
 	q, err := c.adminQuery(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var result Feature
+	var result PlanFeature
 	if err := c.post(ctx, path.Join("/v1/plans", url.PathEscape(planSlug), "features"), q, params, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-// UpdateFeature updates an existing feature on a plan.
-func (c *Client) UpdateFeature(ctx context.Context, planSlug, featureSlug string, params UpdateFeatureParams) (*Feature, error) {
+// UpdatePlanFeature edits the limits or policy on an existing plan-feature link.
+func (c *Client) UpdatePlanFeature(ctx context.Context, planSlug, featureSlug string, params UpdatePlanFeatureParams) (*PlanFeature, error) {
 	q, err := c.adminQuery(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var result Feature
+	var result PlanFeature
 	if err := c.doRequest(ctx, http.MethodPut, path.Join("/v1/plans", url.PathEscape(planSlug), "features", url.PathEscape(featureSlug)), q, params, nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-// DeleteFeature removes a feature from a plan.
-func (c *Client) DeleteFeature(ctx context.Context, planSlug, featureSlug string) error {
+// UnlinkFeature detaches a feature from a plan. The catalog feature itself is unaffected.
+func (c *Client) UnlinkFeature(ctx context.Context, planSlug, featureSlug string) error {
 	q, err := c.adminQuery(ctx, nil)
 	if err != nil {
 		return err

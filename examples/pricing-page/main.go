@@ -55,7 +55,11 @@ func main() {
 				TrialDays: p.TrialDays,
 			}
 			for _, f := range p.Features {
-				pp.Features = append(pp.Features, feature{Name: f.Name, Limit: f.LimitAmount})
+				name := ""
+				if f.Feature != nil {
+					name = f.Feature.Name
+				}
+				pp.Features = append(pp.Features, feature{Name: name, Limit: f.LimitAmount})
 			}
 			out = append(out, pp)
 		}

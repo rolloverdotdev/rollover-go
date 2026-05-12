@@ -33,17 +33,17 @@ func main() {
 	}
 	fmt.Printf("Created plan: %s (%s)\n", plan.Name, plan.Slug)
 
-	// 2. Add features.
-	f, err := ro.CreateFeature(ctx, slug, rollover.CreateFeatureParams{
+	// 2. Link features to the plan. New feature slugs are auto-created in the catalog
+	// as metered features.
+	link, err := ro.LinkFeature(ctx, slug, rollover.LinkFeatureParams{
 		FeatureSlug: "api-calls",
-		Name:        "API Calls",
 		LimitAmount: 10000,
 		ResetPeriod: "monthly",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("  Added feature: %s (limit: %d)\n", f.FeatureSlug, f.LimitAmount)
+	fmt.Printf("  Linked feature: %s (limit: %d)\n", link.Feature.Slug, link.LimitAmount)
 
 	// 3. Subscribe a wallet.
 	wallet := fmt.Sprintf("0x%040x", time.Now().UnixNano())
