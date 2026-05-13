@@ -21,6 +21,80 @@ type TrackResult struct {
 	CreditBalance int  `json:"credit_balance"`
 }
 
+// BatchCheckItem is one feature in a batch check request. Amount is optional;
+// when supplied, the response's Allowed reflects whether that many units would
+// succeed, not just whether any quota remains.
+type BatchCheckItem struct {
+	Feature string `json:"feature"`
+	Amount  *int64 `json:"amount,omitempty"`
+}
+
+// BatchCheckEntry is one feature's per-feature result inside a batch response.
+type BatchCheckEntry struct {
+	Feature       string `json:"feature"`
+	Allowed       bool   `json:"allowed"`
+	Used          int64  `json:"used,omitempty"`
+	Remaining     int64  `json:"remaining"`
+	Limit         int64  `json:"limit"`
+	CreditCost    *int64 `json:"credit_cost,omitempty"`
+	CreditBalance *int64 `json:"credit_balance,omitempty"`
+	OverLimit     bool   `json:"over_limit,omitempty"`
+	ErrorCode     string `json:"error_code,omitempty"`
+	ErrorMessage  string `json:"error_message,omitempty"`
+}
+
+// CreditSummary aggregates the credit-pool math across credit-backed features
+// in the batch. Present only when at least one credit feature appears.
+type CreditSummary struct {
+	Required  int64 `json:"required"`
+	Available int64 `json:"available"`
+	Allowed   bool  `json:"allowed"`
+}
+
+// BatchCheckResult is returned by CheckBatch.
+type BatchCheckResult struct {
+	Wallet        string            `json:"wallet"`
+	Plan          string            `json:"plan"`
+	Results       []BatchCheckEntry `json:"results"`
+	CreditSummary *CreditSummary    `json:"credit_summary,omitempty"`
+}
+
+// BatchTrackEvent is one feature-amount pair in a batch track request.
+type BatchTrackEvent struct {
+	Feature string `json:"feature"`
+	Amount  int64  `json:"amount"`
+}
+
+// BatchTrackEntry is one event's per-feature result inside a batch track response.
+type BatchTrackEntry struct {
+	Feature       string `json:"feature"`
+	Allowed       bool   `json:"allowed"`
+	Used          int64  `json:"used"`
+	Remaining     int64  `json:"remaining"`
+	CreditBalance *int64 `json:"credit_balance,omitempty"`
+	OverLimit     bool   `json:"over_limit,omitempty"`
+	ErrorCode     string `json:"error_code,omitempty"`
+	ErrorMessage  string `json:"error_message,omitempty"`
+}
+
+// BatchTrackResult is returned by TrackBatch.
+type BatchTrackResult struct {
+	Wallet  string            `json:"wallet"`
+	Plan    string            `json:"plan"`
+	BatchID string            `json:"batch_id"`
+	Results []BatchTrackEntry `json:"results"`
+}
+
+// Atomicity controls how TrackBatch handles per-event failures.
+type Atomicity string
+
+const (
+	// AtomicityPerEvent is the default and commits each event independently.
+	AtomicityPerEvent Atomicity = "per_event"
+	// AtomicityAllOrNothing rolls back every event in the batch on any per-event failure.
+	AtomicityAllOrNothing Atomicity = "all_or_nothing"
+)
+
 // CreditBalance is returned by GetCredits.
 type CreditBalance struct {
 	Wallet  string `json:"wallet"`
@@ -211,8 +285,7 @@ type UpdatePlanFeatureParams struct {
 	Policy       *Policy `json:"policy,omitempty"`
 }
 
-// Ptr returns a pointer to the given value, useful for setting fields on
-// update param structs.
+// Ptr returns a pointer to v for setting optional fields on param structs.
 func Ptr[T any](v T) *T { return &v }
 
 // AnalyticsStats contains high-level analytics for the organization.

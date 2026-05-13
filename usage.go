@@ -58,6 +58,47 @@ func (c *Client) Track(ctx context.Context, wallet, feature string, amount int, 
 	return &result, nil
 }
 
+// CheckBatch checks multiple features in one call, optionally preflighting per-entry Amount and returning a CreditSummary when the batch touches credit features.
+func (c *Client) CheckBatch(ctx context.Context, wallet string, items []BatchCheckItem) (*BatchCheckResult, error) {
+	body := struct {
+		Wallet   string           `json:"wallet"`
+		Features []BatchCheckItem `json:"features"`
+	}{wallet, items}
+
+	var result BatchCheckResult
+	if err := c.doRequest(ctx, http.MethodPost, "/v1/check/batch", nil, body, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// TrackBatch records every event in one call, tagging every usage_events row with the returned BatchID and using atomicity to decide whether a per-event failure rolls back the whole batch.
+func (c *Client) TrackBatch(ctx context.Context, wallet string, events []BatchTrackEvent, atomicity Atomicity, opts ...TrackOption) (*BatchTrackResult, error) {
+	var cfg trackConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	body := struct {
+		Wallet    string            `json:"wallet"`
+		Events    []BatchTrackEvent `json:"events"`
+		Atomicity Atomicity         `json:"atomicity,omitempty"`
+	}{wallet, events, atomicity}
+
+	key := cfg.idempotencyKey
+	if key == "" {
+		key = newIdempotencyKey()
+	}
+	headers := http.Header{}
+	headers.Set("Idempotency-Key", key)
+
+	var result BatchTrackResult
+	if err := c.doRequest(ctx, http.MethodPost, "/v1/track/batch", nil, body, headers, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListUsage returns a paginated list of usage events, with optional filters
 // for wallet, feature, and time range.
 func (c *Client) ListUsage(ctx context.Context, opts *ListOptions) (*Page[UsageEvent], error) {
